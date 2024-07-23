@@ -2,8 +2,7 @@ from dotenv import load_dotenv
 import streamlit as st
 import os
 import google.generativeai as genai
-from PyPDF2 import PdfReader
-import io
+import fitz  
 
 
 load_dotenv()
@@ -16,14 +15,17 @@ model = genai.GenerativeModel("gemini-pro")
 chat = model.start_chat(history=[])
 
 def get_gemini_response(question, context):
+
     response = chat.send_message(question + "\nContext: " + context, stream=True)
     return response
 
 def extract_text_from_pdf(pdf_file):
-    pdf_reader = PdfReader(io.BytesIO(pdf_file.read()))
+
+    pdf_document = fitz.open(stream=pdf_file.read(), filetype="pdf")
     text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
+    for page_num in range(len(pdf_document)):
+        page = pdf_document.load_page(page_num)
+        text += page.get_text()
     return text
 
 
@@ -35,6 +37,7 @@ if 'chat_history' not in st.session_state:
     st.session_state['chat_history'] = []
 if 'pdf_context' not in st.session_state:
     st.session_state['pdf_context'] = ""
+
 
 uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
 if uploaded_file is not None:
